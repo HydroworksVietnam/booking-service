@@ -92,6 +92,13 @@ async def upload_service_images(
         "videos": video_filenames
     })
 
+@router_biz_services.post("/image/upload")
+async def upload_service_image(file: UploadFile = File(...)):
+    async with httpx.AsyncClient() as client:
+        files = {"file": (file.filename, file.file, file.content_type)}
+        response = await client.post("http://localhost:6000/upload", files=files)
+        return response.json()
+
 @router_biz_services.put("/{service_id}")
 async def update_service(service_id: PydanticObjectId, service: ServiceUpdate):
     db_service = await Service.get(service_id)

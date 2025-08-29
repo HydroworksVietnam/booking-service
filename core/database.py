@@ -15,12 +15,19 @@ load_dotenv()
 # Create MongoDB client
 from models.service import Service
 from models.appointment import Appointment
-client = AsyncIOMotorClient(
-    f"mongodb://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/"
-)
+# Handle both local (no auth) and production (with auth) connections
+db_user = os.getenv('DB_USER')
+db_password = os.getenv('DB_PASSWORD')
+
+if db_user and db_password:
+    client = AsyncIOMotorClient(
+        f"mongodb://{db_user}:{db_password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/"
+    )
+else:
+    client = AsyncIOMotorClient(f"mongodb://{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/")
 
 # Get database
-db = client[os.getenv('DB_NAME', 'booking_service')]
+db = client[os.getenv('DB_NAME', 'automation_crm')]
 
 # Initialize beanie
 async def init_db():
