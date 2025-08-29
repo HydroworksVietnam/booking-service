@@ -25,15 +25,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=PROJECT_NAME, lifespan=lifespan, redirect_slashes=False)
 
 # Configure CORS
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://h5.zadn.vn",
-]
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000,https://h5.zadn.vn')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=ALLOWED_ORIGINS.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
@@ -42,7 +38,12 @@ app.add_middleware(
 @app.middleware("http")
 async def options_middleware(request: Request, call_next):
     if request.method == "OPTIONS":
-        return Response(status_code=200, content="")
+        response = Response(status_code=200, content="")
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
     return await call_next(request)
 
 app.include_router(api_router, prefix=API_VERSION)
