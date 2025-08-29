@@ -37,10 +37,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    options_success_status=200,
 )
 
 app.include_router(api_router, prefix=API_V1_STR)
-
 
 # For running the app directly
 if __name__ == '__main__':
