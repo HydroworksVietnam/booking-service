@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  booking-service:
+    image: agrispace/booking-service:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9800:9800"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=9800
+      - DB_HOST=119.9.70.83
+      - DB_PORT=32017
+      - DB_USER=root
+      - DB_PASSWORD=changeme
+      - DB_NAME=booking_service
+    volumes:
+      - .:/app
+
+  admin-portal:
+    image: agrispace/admin-portal-platform:2.0
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - VITE_API_BASE_URL=https://api.jupiterpro.online
