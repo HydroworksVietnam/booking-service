@@ -31,20 +31,33 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS.split(","),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    allow_origin_regex="https?://.*",
+    expose_headers=["Access-Control-Allow-Origin", "Accept"]
 )
 
 @app.middleware("http")
-async def options_middleware(request: Request, call_next):
+async def cors_middleware(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Set CORS headers for all responses
+    origin = request.headers.get("origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    # For OPTIONS requests, set additional headers
     if request.method == "OPTIONS":
-        response = Response(status_code=200, content="")
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response
-    return await call_next(request)
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        allowed_headers = request.headers.get("access-control-request-headers", "*")
+        if allowed_headers != "*" and "accept" not in allowed_headers.lower():
+            allowed_headers += ", Accept"
+        response.headers["Access-Control-Allow-Headers"] = allowed_headers
+        response.headers["Access-Control-Max-Age"] = "86400"
+        response.status_code = 200
+        response.content = ""
+    
+    return response
 
 app.include_router(api_router, prefix=API_VERSION)
 
