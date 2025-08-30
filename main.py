@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, Request, Response
+from fastapi import FastAPI, UploadFile, File, Request, Response, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from api import router as api_router
 from core.database import init_db
+from core.middleware import request_id_middleware, custom_http_exception_handler, validation_exception_handler
 import os
 import httpx
 from dotenv import load_dotenv
@@ -17,15 +19,19 @@ PORT = int(os.getenv('PORT', '9800'))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup event
     await init_db()
     yield
-    # Shutdown event (if needed)
 
 app = FastAPI(title=PROJECT_NAME, lifespan=lifespan, redirect_slashes=False)
 
 # Configure CORS
 ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000,https://h5.zadn.vn')
+
+# Register custom exception handlers
+app.exception_handler(HTTPException)(custom_http_exception_handler)
+app.exception_handler(RequestValidationError)(validation_exception_handler)
+
+app.middleware("http")(request_id_middleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,28 +42,6 @@ app.add_middleware(
     allow_origin_regex="https?://.*",
     expose_headers=["Access-Control-Allow-Origin", "Accept"]
 )
-
-@app.middleware("http")
-async def cors_middleware(request: Request, call_next):
-    response = await call_next(request)
-    
-    # Set CORS headers for all responses
-    origin = request.headers.get("origin", "*")
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    
-    # For OPTIONS requests, set additional headers
-    if request.method == "OPTIONS":
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        allowed_headers = request.headers.get("access-control-request-headers", "*")
-        if allowed_headers != "*" and "accept" not in allowed_headers.lower():
-            allowed_headers += ", Accept"
-        response.headers["Access-Control-Allow-Headers"] = allowed_headers
-        response.headers["Access-Control-Max-Age"] = "86400"
-        response.status_code = 200
-        response.content = ""
-    
-    return response
 
 app.include_router(api_router, prefix=API_VERSION)
 
