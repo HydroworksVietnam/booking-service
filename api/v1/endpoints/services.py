@@ -28,12 +28,16 @@ async def get_services(
     # Get paginated items
     services = await Service.find_all().skip(skip).limit(limit).to_list()
     
+    # Calculate page number (1-indexed) from skip and limit
+    # If skip=0, page=1; if skip=5 and limit=5, page=2, etc.
+    page = (skip // limit) + 1 if limit > 0 else 1
+    
     # Create pagination response
     content = [ServiceOut.from_orm(service) for service in services]
     return create_pagination_response(
         content=content,
         total_elements=total_elements,
-        page=skip,
+        page=page,
         size=limit,
         request_id=request_id
     )
